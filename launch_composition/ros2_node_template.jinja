@@ -1,0 +1,18 @@
+#include <rclcpp/rclcpp.hpp>
+{%- for header_file in header_files %}
+#include {{header_file}}
+{%- endfor %}
+
+int main(int argc, char * argv[])
+{
+    rclcpp::init(argc, argv);
+    rclcpp::NodeOptions options = rclcpp::NodeOptions().use_intra_process_comms(true);
+    {{executor_type}} exec;
+    {% for node in node_list %}
+    auto {{ node['name'] }} = std::make_shared<{{ node['class_name'] }}>(options);
+    exec.add_node({{ node['name'] }});
+    {% endfor %}
+    exec.spin();
+    rclcpp::shutdown();
+    return 0;
+}
