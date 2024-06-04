@@ -1,16 +1,31 @@
 #include <rclcpp/rclcpp.hpp>
 {%- for header_file in header_files %}
-#include {{header_file}}
+#include <{{header_file}}>
 {%- endfor %}
+
+std::vector<std::string> create_remap_rules(
+    const std::string & ros_namespace, const std::string & name)
+{
+    std::vector<std::string> remap_rules;
+    remap_rules.emplace_back("-r");
+    remap_rules.emplace_back("__node:=" + name);
+    remap_rules.emplace_back("-r");
+    remap_rules.emplace_back("__ns:=" + ros_namespace);
+    return remap_rules;
+}
 
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
-    rclcpp::NodeOptions options = rclcpp::NodeOptions().use_intra_process_comms(true);
     {{executor_type}} exec;
     {% for node in node_list %}
-    auto {{ node['name'] }} = std::make_shared<{{ node['class_name'] }}>(options);
-    exec.add_node({{ node['name'] }});
+    {
+        rclcpp::NodeOptions options = rclcpp::NodeOptions()
+            .use_intra_process_comms(true)
+            .arguments(create_remap_rules("{{ node['namespace'] }}", "{{ node['name'] }}"));
+        auto node = std::make_shared<{{ node['class_name'] }}>(options);
+        exec.add_node(node);
+    }
     {% endfor %}
     exec.spin();
     rclcpp::shutdown();
